@@ -1,0 +1,171 @@
+blueprint:
+  name: "Zigbee ZBMINI – leave → permit-join → wait rejoin → repair"
+  description: >
+    Opens permit_join when a device (IEEE) leaves the network, waits for a rejoin or announce event, 
+    and then executes a repair sequence (enable Detach Relay, turn on the switch, set Power-On to "on", 
+    perform a short off/on pulse). Ideal for ZBMINI devices with a Zigbee lamp connected behind a Detach Relay.  
+  domain: automation
+  input:
+    ieee:
+      name: IEEE-Adresse
+      description: z.B. 0x1cc089fffedfe314
+      selector:
+        text:
+    friendly_name:
+      name: Friendly Name
+      description: Will be shown in the notification
+      selector:
+        text:
+    permit_seconds:
+      name: Permit-Join (Sek.)
+      description: Set the timeout you want Zigbee2MQTT to permint join
+      default: 60
+      selector:
+        number:
+          min: 10
+          max: 600
+          mode: box
+    switch_entity:
+      name: Switch (Relais)
+      description: Select the Entity for switching the switch
+      selector:
+        entity:
+          domain: switch
+    detach_entity:
+      name: Detach-Relay-Mode (Switch)
+      description: Select the Entity in your ZBMINI for detach relay
+      selector:
+        entity:
+          domain: switch
+    power_on_select:
+      name: Power-On-Behaviour (Select)
+      description: Select the Entity that defines the power on behaviour
+      selector:
+        entity:
+          domain: select
+    power_on_option:
+      name: Power-On-Option
+      description: Standard ist "on"
+      default: "on"
+      selector:
+        select:
+          options: ["on", "off", "toggle", "previous"]
+    delay_after_on:
+      name: Delay for quick switch off-on (Sek.)
+      description: How many seconds to wait for turning on and off the switch
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 120
+          mode: box
+    pulse_ms:
+      name: Puls „Aus“ Dauer (ms)
+      description: After how many miliseconds should the switch be turnd on
+      default: 1500
+      selector:
+        number:
+          min: 0
+          max: 10000
+          mode: box
+
+mode: restart
+
+variables:
+  v_ieee: !input ieee
+  v_name: !input friendly_name
+  v_permit: !input permit_seconds
+  v_switch: !input switch_entity
+  v_detach: !input detach_entity
+  v_power_on_sel: !input power_on_select
+  v_power_on_opt: !input power_on_option
+  v_delay_on: !input delay_after_on
+  v_pulse_ms: !input pulse_ms
+
+trigger:
+  - platform: mqtt
+    topic: zigbee2mqtt/bridge/event
+    value_template: "{{ value_json.type }}"
+    payload: "device_leave"
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.payload_json.data.ieee_address | lower == v_ieee | lower }}"
+
+action:
+  - service: persistent_notification.create
+    data:
+      title: "Zigbee: Gerät hat Netzwerk verlassen"
+      message: >
+        {{ v_name }} ({{ v_ieee }}) hat das Zigbee-Netz verlassen – Permit Join für {{ v_permit }}s geöffnet.
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/bridge/request/permit_join
+      payload: >
+        {{ {'value': true, 'time': v_permit} | tojson }}
+
+  # Warten, bis GENAU dieses Gerät joined/announce sendet
+  - wait_for_trigger:
+      - platform: mqtt
+        topic: zigbee2mqtt/bridge/event
+        # Liefert die IEEE, aber nur bei den gewünschten Typen;
+        # sonst leerer String → kein Match.
+        value_template: >
+          {% set t = value_json.type %}
+          {% if t in ['device_joined', 'device_announce', 'device_interview'] %}
+            {{ value_json.data.ieee_address | lower }}
+          {% else %}
+            {{ '' }}
+          {% endif %}
+        payload: "{{ v_ieee | lower }}"
+    timeout: "00:02:00"
+    continue_on_timeout: true
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ wait.trigger is defined }}"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Zigbee: Gerät ist wieder da"
+              message: "{{ v_name }} ({{ v_ieee }}) ist zurück – Reparatur läuft…"
+
+          # 1) Detach Relay an
+          - service: switch.turn_on
+            target:
+              entity_id: !input detach_entity
+
+          # 2) Switch/Relais an
+          - service: switch.turn_on
+            target:
+              entity_id: !input switch_entity
+
+          # 3) Power-On-Behaviour gezielt setzen
+          - service: select.select_option
+            target:
+              entity_id: !input power_on_select
+            data:
+              option: !input power_on_option
+
+          # 4) kurze Stabilisierung + Pulsen (Aus/Ein)
+          - delay:
+              seconds: "{{ v_delay_on | int }}"
+          - service: switch.turn_off
+            target:
+              entity_id: !input switch_entity
+          - delay:
+              milliseconds: "{{ v_pulse_ms | int }}"
+          - service: switch.turn_on
+            target:
+              entity_id: !input switch_entity
+
+          - service: persistent_notification.create
+            data:
+              title: "Zigbee: Gerät repariert"
+              message: "{{ v_name }} ({{ v_ieee }}) ist repariert."
+    default:
+      - service: persistent_notification.create
+        data:
+          title: "Zigbee: Gerät nicht zurückgekehrt"
+          message: "{{ v_name }} ({{ v_ieee }}) blieb offline nach 2 Minuten."
