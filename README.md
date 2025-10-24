@@ -25,7 +25,6 @@ Perfect for ZBMINIs that control Zigbee lamps via **Detach Relay** mode.
 1. Copy this URL (raw link to the YAML file):
 https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blueprints/automation/zigbee/repair_zbmini_on_rejoin.yaml
 
-
 2. In Home Assistant:
 - Go to **Settings → Automations & Scenes → Blueprints → Import Blueprint**
 - Paste the URL above
@@ -38,7 +37,7 @@ https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blu
 
 ## OR
 Use this link:
-https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blueprints/automation/zigbee/repair_zbmini_on_rejoin.yaml
+[![Import Blueprint into Home Assistant](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blueprints/automation/zigbee/repair_zbmini_on_rejoin.yaml)
 
 
 ---
