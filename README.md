@@ -36,6 +36,11 @@ https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blu
 - Switch entities
 - Power-on select entity
 
+## OR
+Use this link:
+https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/ismailovic/ha-blueprint-zbmini-repair/main/blueprints/automation/zigbee/repair_zbmini_on_rejoin.yaml
+
+
 ---
 
 ## Inputs
