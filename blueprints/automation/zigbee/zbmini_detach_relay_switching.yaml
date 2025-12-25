@@ -1,15 +1,15 @@
 blueprint:
   name: Z2M action toggle -> toggle light
-  description: "Zigbee2MQTT action 'toggle' auf Topic -> toggelt ein Light-Entity"
+  description: "Zigbee2MQTT action 'toggle' on topic -> toggles a light entity"
   domain: automation
   input:
     mqtt_topic:
       name: Zigbee2MQTT MQTT topic
-      description: "z.B. zigbee2mqtt/<friendly_name> oder zigbee2mqtt/<ieee_address>"
+      description: "e.g. zigbee2mqtt/<friendly_name> or zigbee2mqtt/<ieee_address>"
       selector:
         text: {}
     target_light:
-      name: Ziel-Licht
+      name: Target light
       selector:
         entity:
           domain: light
@@ -40,4 +40,3 @@ action:
   - service: light.toggle
     target:
       entity_id: !input target_light
-
