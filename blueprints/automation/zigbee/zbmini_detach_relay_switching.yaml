@@ -1,1 +1,43 @@
+blueprint:
+  name: Z2M action toggle -> toggle light
+  description: "Zigbee2MQTT action 'toggle' auf Topic -> toggelt ein Light-Entity"
+  domain: automation
+  input:
+    mqtt_topic:
+      name: Zigbee2MQTT MQTT topic
+      description: "z.B. zigbee2mqtt/<friendly_name> oder zigbee2mqtt/<ieee_address>"
+      selector:
+        text: {}
+    target_light:
+      name: Ziel-Licht
+      selector:
+        entity:
+          domain: light
+    debounce_ms:
+      name: Debounce (ms)
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: slider
+          unit_of_measurement: ms
+
+mode: single
+
+trigger:
+  - platform: mqtt
+    topic: !input mqtt_topic
+
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.payload_json.action is defined and trigger.payload_json.action == 'toggle' }}
+
+action:
+  - delay:
+      milliseconds: !input debounce_ms
+  - service: light.toggle
+    target:
+      entity_id: !input target_light
 
